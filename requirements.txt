@@ -1,0 +1,6 @@
+# Execução (versões testadas: requests 2.33.1, python-dotenv 1.2.2)
+requests>=2.31,<3
+python-dotenv>=1.0,<2
+
+# Testes (os testes usam unittest + unittest.mock e rodam com `pytest` ou com `python -m unittest`)
+pytest>=8.0
