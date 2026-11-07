@@ -1,7 +1,7 @@
 # P0 — Lançamentos contábeis por competência com apoio de LLM
 
-Projeto P0 (Primeiro fluxo com LLM) — TrendsIA / Univesp.
-Autor: **[PREENCHER: seu nome]** · Vídeo de demonstração: **[PREENCHER: link do YouTube não listado]**
+Projeto P0 (Primeiro fluxo com LLM) — TrendsIA / SOFTEX Campinas / UNIVESP.
+Autor: **Roberto Alves Leite** · Vídeo de demonstração: **Link do YouTube ainda não listado]**
 
 ## 1. Problema
 
@@ -48,7 +48,7 @@ entrada (terminal/arquivo) → validação → configuração (.env) → solicit
 são suportados, escolhidos em `LLM_API_FORMAT`: `anthropic` (padrão, API de Mensagens da Anthropic) e
 `openai` (formato `chat/completions`, usado por muitos provedores e gateways institucionais). O modelo
 vem de `LLM_MODEL` e o endereço de `LLM_API_URL`; trocar de modelo ou provedor não exige alterar o código.
-**[PREENCHER: provedor, modelo e formato que você efetivamente usou.]**
+**[Provedor, modelo e formato que você efetivamente usou.]**
 
 ## 4. Limites do projeto
 
