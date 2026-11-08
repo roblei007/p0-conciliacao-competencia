@@ -16,6 +16,7 @@ dist/
 # Registros de execução
 logs/
 *.log
+*.tar
 
 # Editores / sistema
 .vscode/

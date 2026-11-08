@@ -29,26 +29,11 @@ nunca contabilização automática.
 ## 3. Como a solução funciona
 
 ```
-entrada (terminal/arquivo) → validação → configuração (.env) → solicitação → LLM (API REST)
-        → interpretação do JSON devolvido → apresentação no terminal
+entrada no terminal → configuração (.env) → Ollama interno (API REST) → resposta no terminal
 ```
 
-| Módulo | Responsabilidade |
-|---|---|
-| `lancamentos/entrada.py` | captura (terminal/arquivo) e validação da entrada (vazia, tamanho) |
-| `lancamentos/config.py` | carrega e valida a configuração (variáveis de ambiente / `.env`) |
-| `lancamentos/prompt.py` | prepara a solicitação (instruções + fato operacional) |
-| `lancamentos/cliente_llm.py` | chamada HTTP ao LLM e classificação das falhas (auth, indisponibilidade, rede, timeout) |
-| `lancamentos/resposta.py` | extrai e valida o JSON devolvido pelo modelo |
-| `lancamentos/apresentacao.py` | formata o resultado para o terminal |
-| `lancamentos/logs.py` | registros de execução (somente metadados) |
-| `lancamentos/main.py` | orquestra o fluxo e converte erros em mensagens e códigos de saída |
-
-**Provedor e modelo:** chamada por **REST** com a biblioteca `requests` (sem SDK). Dois formatos de API
-são suportados, escolhidos em `LLM_API_FORMAT`: `anthropic` (padrão, API de Mensagens da Anthropic) e
-`openai` (formato `chat/completions`, usado por muitos provedores e gateways institucionais). O modelo
-vem de `LLM_MODEL` e o endereço de `LLM_API_URL`; trocar de modelo ou provedor não exige alterar o código.
-**[Provedor, modelo e formato que você efetivamente usou.]**
+O programa está em `app_basico.py`. Ele usa a API de chat nativa do Ollama, configurada para
+`https://llm-internal.softex:9001/api/chat`, com o modelo `qwen3.5:9b-q4_K_M`.
 
 ## 4. Limites do projeto
 
@@ -81,43 +66,35 @@ O ambiente está ativo quando o prefixo `(.venv)` aparece no início da linha do
 
 ## 6. Configuração do acesso ao LLM
 
-1. Gere uma chave de API no console do provedor indicado pela coordenação (ou, se usar outro provedor
-   por conta própria, no console dele, como https://console.anthropic.com; neste caso, eventuais custos são
-   de responsabilidade do estudante). A chave é exibida **uma única vez**: copie-a na hora.
-2. Copie o modelo de configuração e edite:
+1. Copie o modelo de configuração:
 
 ```bash
 cp .env.example .env            # Windows: Copy-Item .env.example .env
 ```
 
-3. No `.env`, preencha `LLM_API_KEY` (sua chave) e `LLM_MODEL` (nome do modelo). Se o seu provedor usa o
-   formato `chat/completions`, descomente também `LLM_API_FORMAT=openai` e `LLM_API_URL=...`.
-   O arquivo `.env` está no `.gitignore`: **nunca o publique**. Se uma chave vazar, **revogue-a** no console
-   (veja a seção "Solução de problemas").
+2. O `.env.example` já aponta para o Ollama interno e para o modelo solicitado. A API interna não
+   exige chave por padrão; se a equipe que administra o servidor fornecer uma, configure `LLM_API_KEY`
+   no `.env`. O arquivo `.env` está no `.gitignore`: **nunca o publique**.
 
 Parâmetros opcionais (alteráveis sem mexer no código):
 
 | Variável | Padrão | Função |
 |---|---|---|
-| `LLM_MAX_TOKENS` | 1500 | limite de tokens da resposta |
-| `LLM_TEMPERATURE` | 0.0 | aleatoriedade (0 = mais determinístico); vazio = não envia |
-| `LLM_TIMEOUT` | 30 | segundos de espera pela resposta |
-| `LLM_API_FORMAT` | `anthropic` | formato da API: `anthropic` ou `openai` |
-| `LLM_API_URL` | endpoint da Anthropic | endereço da API (obrigatório no formato `openai`) |
-| `LOG_LEVEL` / `LOG_ARQUIVO` | INFO / `logs/execucao.log` | registros de execução |
+| `LLM_API_URL` | `https://llm-internal.softex:9001/api/chat` | endpoint de chat do Ollama |
+| `LLM_MODEL` | `qwen3.5:9b-q4_K_M` | modelo disponibilizado no servidor |
+| `LLM_API_KEY` | vazio | opcional; só use se o servidor exigir |
+| `LLM_MAX_TOKENS` | 1000 | limite máximo de tokens gerados |
+| `LLM_TIMEOUT` | 120 | segundos de espera pela resposta |
 
 ## 7. Execução
 
 ```bash
-# Modo interativo: digite o fato e finalize com uma linha vazia
-python -m lancamentos
-
-# A partir de um arquivo de texto (UTF-8)
-python -m lancamentos --arquivo exemplos/fato_energia.txt
-
-# Direto na linha de comando
-python -m lancamentos --texto "Em 28/10/2026 o banco recebeu fatura de energia de R$ 12.400,00 referente a outubro, vencimento 10/11/2026."
+python app_basico.py
 ```
+
+Digite o fato operacional quando solicitado. O computador precisa estar conectado à rede que
+resolve e permite acesso a `llm-internal.softex`; em Docker, essa conectividade e a confiança no
+certificado HTTPS também precisam estar disponíveis dentro do container.
 
 **Códigos de saída:** `0` sucesso · `1` entrada inválida · `2` configuração/credencial ausente ou
 inválida · `3` credencial recusada pelo serviço · `4` serviço indisponível, falha de rede ou timeout ·
@@ -229,3 +206,29 @@ chave imediatamente no console do provedor, gere outra e só então limpe o hist
 
 - `RELATORIO_EXECUCAO.md` — evolução por nível, decisões, testes, falhas e uso de IA.
 - `docs/GUIA_ENTREGA.md` — roteiro de commits, tags, pull request, ambiente limpo, chave vazada e vídeo.
+
+## 15. Criar e exportar a imagem Docker
+
+Abra o terminal na pasta que contém o `Dockerfile` e mantenha o Docker Desktop iniciado.
+No PowerShell, crie a imagem com o ponto final (`.`), que informa ao Docker que a pasta atual
+é o contexto do build:
+
+```powershell
+docker build -t meu-app:1.0 .
+```
+
+Para salvar a imagem como um arquivo TAR na pasta do projeto:
+
+```powershell
+docker save -o .\meu-app.tar meu-app:1.0
+```
+
+O arquivo `.env` não é incluído na imagem. Para executar o programa no container, crie e preencha
+esse arquivo com as variáveis de acesso ao provedor e rode:
+
+```powershell
+docker run --rm -it --env-file .env meu-app:1.0
+```
+
+Se o Docker informar que não consegue conectar ao daemon/engine, inicie o Docker Desktop,
+aguarde o engine ficar pronto e repita os comandos.
