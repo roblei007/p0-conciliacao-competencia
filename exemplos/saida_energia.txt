@@ -1,0 +1,10 @@
+Lançamento 1 | competência 31/10/2026
+  D  Despesa com energia elétrica                      R$ 12.400,00
+  C  Energia elétrica a pagar                          R$ 12.400,00
+  Histórico:   Consumo de energia da agência central - outubro/2026
+  Competência: O consumo ocorreu de 01/10 a 31/10/2026; o vencimento em novembro não altera o período de reconhecimento.
+
+Pontos de atenção para o contador:
+  - Confirmar se a conta de contrapartida segue o plano de contas (COSIF) adotado pela instituição.
+
+Sugestão gerada por IA: revise contas, valores e datas antes de contabilizar.
