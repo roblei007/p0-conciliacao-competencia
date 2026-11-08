@@ -1,7 +1,7 @@
 # P0 — Lançamentos contábeis por competência com apoio de LLM
 
 Projeto P0 (Primeiro fluxo com LLM) — TrendsIA / SOFTEX Campinas / UNIVESP.
-Autor: **Roberto Alves Leite** · Vídeo de demonstração: **Link do YouTube ainda não listado]**
+Autor: **Roberto Alves Leite** · Vídeo de demonstração: **Link do YouTube ainda não listado**
 
 ## 1. Problema
 
@@ -63,8 +63,8 @@ Bibliotecas: `requests` (testado com 2.33.1), `python-dotenv` (testado com 1.2.2
 Terminal: qualquer um (Windows Terminal/PowerShell, macOS, Linux ou WSL). Os comandos abaixo indicam as variações.
 
 ```bash
-git clone [PREENCHER: URL do seu repositório]
-cd [PREENCHER: nome da pasta]
+git clone [URL do seu repositório]
+cd [nome da pasta]
 
 # Linux / macOS / WSL  (no Ubuntu/WSL pode ser preciso: sudo apt-get install python3-venv python3-pip)
 python3 -m venv .venv
@@ -148,7 +148,7 @@ Sugestão gerada por IA: revise contas, valores e datas antes de contabilizar.
 ```
 
 > **Atenção:** `saida_energia.txt` é uma saída **ilustrativa**, gerada a partir de uma resposta
-> simulada para mostrar o formato. [PREENCHER: substitua pela saída da sua execução real e indique a
+> simulada para mostrar o formato. [substitua pela saída da sua execução real e indique a
 > data e o modelo usado.] A resposta de um LLM pode variar entre execuções.
 
 Outros exemplos prontos: `exemplos/fato_seguro.txt` (pagamento antecipado que abrange vários
@@ -199,11 +199,11 @@ e número de lançamentos. **Nunca** grava chave, texto do fato operacional ou c
 - A resposta pode variar entre execuções, mesmo com temperatura 0.
 - Respostas muito longas podem ser cortadas por `LLM_MAX_TOKENS` (o programa avisa e orienta a aumentar).
 - Não envie dados pessoais ou sigilosos reais a um provedor externo sem autorização da instituição.
-  [PREENCHER: acrescente aqui as limitações que você observou nas suas execuções.]
+  [Acrescente aqui as limitações que você observou nas suas execuções.]
 
 ## 12. Validação em ambiente limpo
 
-[PREENCHER: data, sistema operacional, versão do Python e resultado de seguir apenas este README
+[Data, sistema operacional, versão do Python e resultado de seguir apenas este README
 em um novo ambiente virtual ou outro computador. Registre qualquer problema encontrado e a correção.]
 
 ## 13. Solução de problemas
