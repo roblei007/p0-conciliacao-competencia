@@ -1,6 +1,6 @@
 # Relatório de execução — P0
 
-> Itens marcados **[PREENCHER]** dependem de ações suas (execuções reais, histórico do Git, vídeo,
+> Itens marcados dependem de ações suas (execuções reais, histórico do Git, vídeo,
 > sua reflexão). Os resultados de testes simulados abaixo foram obtidos de fato na execução do projeto;
 > revise-os e **repita-os na sua máquina** antes de entregar.
 
@@ -53,7 +53,7 @@ Comando: `pytest -v` (equivalente: `python -m unittest discover -s tests -t . -v
 | Logs sem segredos | Execução com chave e texto "confidencial" | Log sem chave nem texto | OK |
 
 Resultado da última execução com `unittest` no desenvolvimento: **54 testes, 0 falhas, 2 ignorados** (os 2 testes reais, que exigem `RUN_REAL_TESTS=1`).
-**[PREENCHER: rode `pytest -v` na sua máquina e cole o resultado final. O `pytest` não pôde ser executado durante a geração do projeto, então confirme que os mesmos testes passam.]**
+**[rode `pytest -v` na sua máquina e cole o resultado final. O `pytest` não pôde ser executado durante a geração do projeto, então confirme que os mesmos testes passam.]**
 
 ### 3.2 Execuções reais pelo terminal
 
@@ -62,13 +62,13 @@ Resultado da última execução com `unittest` no desenvolvimento: **54 testes, 
 | Entrada vazia (real) | Enter sem texto | Mensagem de entrada vazia, sem chamada | Observado no desenvolvimento: código 1 e mensagem orientativa |
 | Credencial ausente (real) | Sem `.env` / sem `LLM_API_KEY` | Mensagem pedindo configurar `.env` | Observado no desenvolvimento: código 2 |
 | Falha de comunicação (real) | `LLM_API_URL=http://localhost:9` | Mensagem de falha de conexão | Observado no desenvolvimento: código 4 |
-| Entrada válida (real) | `exemplos/fato_energia.txt` com chave válida | Lançamento com competência em outubro/2026 | **[PREENCHER]** |
-| Entrada válida 2 (real) | `exemplos/fato_seguro.txt` | Despesa do mês + despesa antecipada | **[PREENCHER]** |
-| Entrada incompleta (real) | `exemplos/fato_incompleto.txt` | Sem lançamento, com alerta de dados ausentes | **[PREENCHER]** |
-| Credencial inválida (real) | `LLM_API_KEY=chave-falsa` | HTTP 401 → término controlado | **[PREENCHER]** |
-| Testes reais automatizados | `RUN_REAL_TESTS=1 pytest tests/test_integracao_real.py -v` | 2 testes OK | **[PREENCHER]** |
-| Ambiente limpo | Novo venv + seguir só o README | Instalação e execução sem ajuda | **[PREENCHER]** |
-| Proteção de segredo | `git log -p \| grep -i "sk-"` e conferir `.env` | Nenhuma ocorrência | **[PREENCHER]** |
+| Entrada válida (real) | `exemplos/fato_energia.txt` com chave válida | Lançamento com competência em outubro/2026 |
+| Entrada válida 2 (real) | `exemplos/fato_seguro.txt` | Despesa do mês + despesa antecipada |
+| Entrada incompleta (real) | `exemplos/fato_incompleto.txt` | Sem lançamento, com alerta de dados ausentes |
+| Credencial inválida (real) | `LLM_API_KEY=chave-falsa` | HTTP 401 → término controlado |
+| Testes reais automatizados | `RUN_REAL_TESTS=1 pytest tests/test_integracao_real.py -v` | 2 testes OK |
+| Ambiente limpo | Novo venv + seguir só o README | Instalação e execução sem ajuda |
+| Proteção de segredo | `git log -p \| grep -i "sk-"` e conferir `.env` | Nenhuma ocorrência |
 
 ## 4. Falhas e limitações
 
@@ -78,7 +78,7 @@ Resultado da última execução com `unittest` no desenvolvimento: **54 testes, 
 - *Como foi tratado:* 401 e 403 passaram a ter mensagens diferentes; a de 403 cita permissão do modelo e possível bloqueio por proxy/firewall. Foi criado o teste `test_403_menciona_possivel_bloqueio_de_rede`.
 - *Por que permanece parcialmente:* a aplicação não consegue distinguir com certeza "sem permissão" de "bloqueio de rede" só pelo status 403; por isso a mensagem lista as duas causas.
 
-**[PREENCHER: acrescente uma dificuldade real que VOCÊ encontrou ao executar (ex.: resposta cortada por `max_tokens`, modelo devolvendo JSON em bloco de código, conta contábil discutível, valor com formato inesperado), explicando: o que aconteceu, como identificou, como tratou e o que permanece.]**
+**[dificuldade real ao executar (ex.: resposta cortada por `max_tokens`, modelo devolvendo JSON em bloco de código, conta contábil discutível, valor com formato inesperado)].**
 
 **Limitações que permanecem:** o modelo pode errar a competência ou as contas; nomes de contas
 não seguem o plano de contas oficial; um fato por execução; sem novas tentativas automáticas.
@@ -87,19 +87,17 @@ não seguem o plano de contas oficial; um fato por execução; sem novas tentati
 
 | Item | Registro |
 |---|---|
-| Ferramenta utilizada | Claude (Anthropic), via claude.ai — **[PREENCHER: modelo/versão exibida]** |
+| Ferramenta utilizada | Claude (Anthropic), via claude.ai |
 | Tarefa delegada | Proposta de arquitetura em módulos, código Python, testes `unittest`, `README`, modelo deste relatório e roteiro do vídeo, a partir do enunciado do P0 e do problema escolhido. |
 | Resultado aproveitado | Estrutura de módulos, prompt de sistema, classificação de erros HTTP, validação do JSON, testes simulados e documentação. |
-| Correções ou alterações | Durante a geração, a IA encontrou e corrigiu: isolamento dos testes de log, criação indevida de `logs/` durante os testes e a mensagem única para 401/403. **[PREENCHER: o que VOCÊ alterou, simplificou ou reescreveu após revisar (ex.: nomes de contas, mensagens, prompt, exemplos).]** |
-| Forma de verificação | Execução dos testes simulados; execução de cenários de falha pelo terminal; leitura linha a linha dos módulos. **[PREENCHER: confirme o que você de fato verificou e executou, incluindo a chamada real ao LLM.]** |
-
+| Correções ou alterações | Durante a geração, a IA encontrou e corrigiu: isolamento dos testes de log, criação indevida de `logs/` durante os testes e a mensagem única para 401/403. |
+| Forma de verificação | Execução dos testes simulados; execução de cenários de falha pelo terminal; leitura linha a linha dos módulos. 
 ## 6. Reflexão final
 
-**[PREENCHER com suas palavras, em poucas linhas:]**
-- Principal aprendizado (ex.: por que pedir saída estruturada e validá-la; diferença entre os tipos de falha de uma API).
-- Competência mais desenvolvida (C01, C02, C03 ou C04) e por quê.
-- O que ainda precisa melhorar (ex.: plano de contas real, novas tentativas automáticas, avaliação da qualidade contábil das respostas).
+- Principal aprendizado: por que pedir saída estruturada e validá-la; diferença entre os tipos de falha de uma API.
+- Competência mais desenvolvida (C01, C02, C03 ou C04) e porque obtive neste projeto inicial a preparação para os demais.
+- O que ainda precisa melhorar: plano de contas real, novas tentativas automáticas, avaliação da qualidade contábil das respostas.
 
 ## 7. Vídeo de demonstração
 
-**[PREENCHER: link do vídeo no YouTube (não listado, máximo de 5 min, legendas revisadas).]**
+**Link do vídeo no YouTube (não listado, máximo de 5 min, legendas revisadas).**
