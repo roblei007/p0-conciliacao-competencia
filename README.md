@@ -1,6 +1,6 @@
 # P0 — Lançamentos contábeis por competência com apoio de LLM
 
-Projeto P0 (Primeiro fluxo com LLM) — TrendsIA / SOFTEX / UNIVESP.
+Projeto P0 (Primeiro fluxo com LLM) — TrendsIA / SOFTEX Campinas / UNIVESP.
 Autor: **Roberto Alves Leite** · Vídeo de demonstração: **Link do YouTube não listado**
 
 ## 1. Problema
