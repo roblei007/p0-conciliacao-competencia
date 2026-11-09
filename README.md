@@ -29,11 +29,11 @@ nunca contabilização automática.
 ## 3. Como a solução funciona
 
 ```
-entrada no terminal → configuração (.env) → Ollama interno (API REST) → resposta no terminal
+entrada no terminal → configuração (.env) → API Groq (SDK OpenAI) → resposta no terminal
 ```
 
-O programa está em `app_basico.py`. Ele usa a API de chat nativa do Ollama, configurada para
-`https://llm-internal.softex:9001/api/chat`, com o modelo `qwen3.5:9b-q4_K_M`.
+O programa está em `app_basico.py`. Ele usa o SDK OpenAI apontado para a API compatível da Groq,
+com o modelo `qwen/qwen3.8-27b`.
 
 ## 4. Limites do projeto
 
@@ -44,7 +44,7 @@ Python, execução local, um único LLM, entrada e saída textuais, um fato oper
 ## 5. Instalação
 
 Requisitos: **Python 3.10 ou superior** (desenvolvido e testado com Python 3.12.3) e Git.
-Bibliotecas: `requests` (testado com 2.33.1), `python-dotenv` (testado com 1.2.2) e `pytest` (para os testes).
+Bibliotecas: `openai`, `python-dotenv` e `pytest` (para os testes).
 Terminal: qualquer um (Windows Terminal/PowerShell, macOS, Linux ou WSL). Os comandos abaixo indicam as variações.
 
 ```bash
@@ -72,17 +72,16 @@ O ambiente está ativo quando o prefixo `(.venv)` aparece no início da linha do
 cp .env.example .env            # Windows: Copy-Item .env.example .env
 ```
 
-2. O `.env.example` já aponta para o Ollama interno e para o modelo solicitado. A API interna não
-   exige chave por padrão; se a equipe que administra o servidor fornecer uma, configure `LLM_API_KEY`
-   no `.env`. O arquivo `.env` está no `.gitignore`: **nunca o publique**.
+2. No `.env`, informe sua chave `GROQ_API_KEY`, obtida em https://console.groq.com/keys.
+   O arquivo `.env` está no `.gitignore`: **nunca o publique**.
 
 Parâmetros opcionais (alteráveis sem mexer no código):
 
 | Variável | Padrão | Função |
 |---|---|---|
-| `LLM_API_URL` | `https://llm-internal.softex:9001/api/chat` | endpoint de chat do Ollama |
-| `LLM_MODEL` | `qwen3.5:9b-q4_K_M` | modelo disponibilizado no servidor |
-| `LLM_API_KEY` | vazio | opcional; só use se o servidor exigir |
+| `LLM_API_URL` | `https://api.groq.com/openai/v1` | URL base da API Groq |
+| `LLM_MODEL` | `qwen/qwen3.8-27b` | modelo da Groq |
+| `GROQ_API_KEY` | vazio | chave de API obrigatória |
 | `LLM_MAX_TOKENS` | 1000 | limite máximo de tokens gerados |
 | `LLM_TIMEOUT` | 120 | segundos de espera pela resposta |
 
@@ -92,24 +91,24 @@ Parâmetros opcionais (alteráveis sem mexer no código):
 python app_basico.py
 ```
 
-Digite o fato operacional quando solicitado. O computador precisa estar conectado à rede que
-resolve e permite acesso a `llm-internal.softex`; em Docker, essa conectividade e a confiança no
-certificado HTTPS também precisam estar disponíveis dentro do container.
+Digite o fato operacional quando solicitado. O computador precisa ter acesso à internet para chamar
+a API Groq; em Docker, configure a chave no ambiente do container.
 
-**Códigos de saída:** `0` sucesso · `1` entrada inválida · `2` configuração/credencial ausente ou
-inválida · `3` credencial recusada pelo serviço · `4` serviço indisponível, falha de rede ou timeout ·
-`5` resposta vazia/truncada/em formato inesperado · `99` erro inesperado.
+**Códigos de saída:** `0` sucesso · `1` entrada vazia ou encerrada · `2` configuração inválida ou
+solicitação rejeitada (HTTP 4xx, exceto 401/403) · `3` chave/permissão recusada · `4` falha de rede,
+limite de requisições ou indisponibilidade (HTTP 5xx) · `5` resposta vazia ou truncada · `99` erro
+inesperado do SDK.
 
 ## 8. Exemplos de entrada e saída
 
-**Entrada** (`exemplos/fato_energia.txt`):
+**Exemplo de entrada**:
 
 ```
 Em 28/10/2026 o banco recebeu a fatura de energia elétrica da agência central, no valor de
 R$ 12.400,00, referente ao consumo de 01/10/2026 a 31/10/2026, com vencimento em 10/11/2026.
 ```
 
-**Saída** (`exemplos/saida_energia.txt`):
+**Exemplo ilustrativo de saída**:
 
 ```
 Lançamento 1 | competência 31/10/2026
@@ -124,90 +123,63 @@ Pontos de atenção para o contador:
 Sugestão gerada por IA: revise contas, valores e datas antes de contabilizar.
 ```
 
-> **Atenção:** `saida_energia.txt` é uma saída **ilustrativa**, gerada a partir de uma resposta
-> simulada para mostrar o formato. [substitua pela saída da sua execução real e indique a
-> data e o modelo usado.] A resposta de um LLM pode variar entre execuções.
-
-Outros exemplos prontos: `exemplos/fato_seguro.txt` (pagamento antecipado que abrange vários
-períodos) e `exemplos/fato_incompleto.txt` (falta de dados: o esperado é nenhum lançamento e um
-alerta pedindo as informações ausentes).
+> **Atenção:** a saída acima é apenas ilustrativa; o programa imprime o texto gerado pelo modelo,
+> que pode variar e deve ser revisado por um contador.
 
 **Entrada vazia** (enviar só Enter):
 
 ```
-Erro: Entrada vazia. Descreva o fato operacional (o que ocorreu, quando, valor e período).
+Erro: descreva o fato operacional.
 ```
 
-## 9. Testes
+## 9. Testes automatizados
 
-Os testes usam `unittest` e `unittest.mock` (dublês da API) e são executados com `pytest`.
+Os testes em `tests/test_app_basico.py` usam mocks e não fazem chamadas à Groq, não exigem chave
+válida e não consomem créditos. Eles cobrem configuração obrigatória e numérica, chamada do SDK,
+respostas vazias/truncadas, classificação de erros HTTP/SDK e comportamento do terminal.
 
 ```bash
-# Testes SEM chamada real ao LLM (simulados) — não precisam de chave, de internet nem gastam crédito
-pytest -v
-# alternativa equivalente, sem pytest:  python -m unittest discover -s tests -t . -v
-
-# Testes COM chamada real (opcionais; exigem internet e chave válida; consomem créditos)
-RUN_REAL_TESTS=1 pytest tests/test_integracao_real.py -v      # PowerShell: $env:RUN_REAL_TESTS="1"
+python -m pytest -v
+# Alternativa sem pytest:
+python -m unittest discover -s tests -v
 ```
 
-Sem `RUN_REAL_TESTS=1`, os 2 testes reais aparecem como *skipped* (ignorados), o que é o esperado.
+Uma chamada real à Groq não faz parte da suíte automatizada; teste-a manualmente somente com uma
+chave válida e sabendo que o provedor pode consumir cota.
 
-| Tipo | O que cobre |
-|---|---|
-| **Simulados** (`test_entrada`, `test_config`, `test_prompt`, `test_resposta`, `test_cliente_llm`, `test_main`) | entrada vazia/grande, configuração ausente/inválida, **credencial ausente**, **credencial inválida** (HTTP 401/403 simulado), indisponibilidade (429/5xx), **falha de comunicação** e **timeout**, resposta vazia/truncada/inválida (nos dois formatos de API), logs sem segredos |
-| **Reais** (`test_integracao_real`) | chamada real com entrada válida e **credencial inválida real** (chave falsa contra o serviço) |
+## 10. Privacidade e credenciais
 
-Falhas reais também podem ser demonstradas manualmente: sem `.env` (credencial ausente),
-`LLM_API_KEY=chave-falsa` (credencial inválida) e `LLM_API_URL=http://localhost:9` (falha de comunicação).
-
-## 10. Registros de execução
-
-`logs/execucao.log` guarda só metadados: data/hora, modelo, status HTTP, duração, tamanho da entrada
-e número de lançamentos. **Nunca** grava chave, texto do fato operacional ou conteúdo da resposta
-(há teste automatizado para isso). Motivo: o texto digitado pode conter dados pessoais ou sigilosos
-(LGPD) e não é necessário para investigar o comportamento da aplicação.
+O programa envia o fato operacional à API externa da Groq. Não envie dados pessoais ou sigilosos
+sem autorização institucional. O `.env` está no `.gitignore`; nunca publique a chave. O aplicativo
+não cria arquivos de log.
 
 ## 11. Limitações conhecidas
 
 - O modelo pode errar contas, valores ou o período de competência; **a revisão do contador é obrigatória**.
 - Os nomes das contas são descritivos: não seguem o plano de contas oficial (COSIF) da instituição.
-- Um fato por execução; sem novas tentativas automáticas em caso de indisponibilidade.
-- A resposta pode variar entre execuções, mesmo com temperatura 0.
-- Respostas muito longas podem ser cortadas por `LLM_MAX_TOKENS` (o programa avisa e orienta a aumentar).
-- Não envie dados pessoais ou sigilosos reais a um provedor externo sem autorização da instituição.
-  [Acrescente aqui as limitações que você observou nas suas execuções.]
+- Um fato por execução; não há novas tentativas automáticas em caso de indisponibilidade.
+- A resposta pode variar entre execuções. O programa detecta respostas vazias e truncamento pelo
+  limite de tokens, mas não valida a correção contábil do conteúdo.
+- O acesso à Groq depende da internet, da validade da chave e da disponibilidade/cota do provedor.
 
-## 12. Validação em ambiente limpo
-
-[Data, sistema operacional, versão do Python e resultado de seguir apenas este README
-em um novo ambiente virtual ou outro computador. Registre qualquer problema encontrado e a correção.]
-
-## 13. Solução de problemas
+## 12. Solução de problemas
 
 | Sintoma | Causa provável | O que fazer |
 |---|---|---|
-| `ModuleNotFoundError: No module named 'requests'` ou `'dotenv'` | ambiente virtual não ativado, ou `pip install` feito em outro Python | ative o `.venv` (prefixo `(.venv)`), rode `pip install -r requirements.txt` e confira com `python -c "import sys; print(sys.executable)"` que o Python é o do `.venv` |
-| `ModuleNotFoundError: No module named 'lancamentos'` | comando executado fora da pasta do projeto | entre na raiz do repositório e use `python -m lancamentos` |
+| `ModuleNotFoundError: No module named 'openai'` ou `'dotenv'` | ambiente virtual não ativado, ou `pip install` feito em outro Python | ative o `.venv` (prefixo `(.venv)`), rode `pip install -r requirements.txt` e confira com `python -c "import sys; print(sys.executable)"` que o Python é o do `.venv` |
 | PowerShell: "a execução de scripts foi desabilitada" | política de execução do Windows | `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` e ative o `.venv` de novo |
-| `Erro: A variável LLM_API_KEY não foi encontrada` | `.env` não existe ou está em outra pasta | `cp .env.example .env` na raiz e preencha a chave |
-| `O serviço recusou a credencial` (401) | chave errada, revogada ou com espaços | gere outra chave e atualize o `.env` |
-| `Acesso negado pelo serviço (HTTP 403)` | sem permissão para o modelo ou bloqueio de proxy/firewall | confira `LLM_MODEL`, a rede (VPN/proxy) e as permissões da chave |
-| `A resposta foi cortada por atingir o limite de tokens` | `LLM_MAX_TOKENS` baixo para o fato descrito | aumente `LLM_MAX_TOKENS` no `.env` (ex.: 3000) |
-| `O serviço rejeitou a solicitação (HTTP 400)` | nome de modelo inválido ou parâmetro não aceito | confira `LLM_MODEL`; se necessário deixe `LLM_TEMPERATURE=` em branco |
+| `Erro: A variável GROQ_API_KEY não foi configurada` | `.env` não existe, está em outra pasta ou a chave está em branco | copie `.env.example` para `.env` na raiz e preencha a chave |
+| `A Groq recusou a chave` (401) | chave errada, revogada ou com espaços | gere outra chave e atualize o `.env` |
+| Acesso negado (403) | sem permissão para o modelo ou chave sem autorização | confira o modelo e as permissões da chave |
+| Resposta truncada | `LLM_MAX_TOKENS` insuficiente | aumente `LLM_MAX_TOKENS` no `.env` |
+| Solicitação rejeitada (HTTP 400) | modelo ou configuração recusados pelo serviço | confira `LLM_MODEL` e as configurações |
+| Limite de requisições ou serviço indisponível | cota/rate limit ou indisponibilidade temporária | aguarde e tente novamente; confira sua cota Groq |
 | `pytest` não encontrado | dependências não instaladas | `pip install -r requirements.txt` com o `.venv` ativo |
-| Funciona na minha máquina, não na de outra pessoa | Python < 3.10 ou dependência não declarada | confira `python --version` e instale só com `requirements.txt` em um `.venv` novo |
 
 **Se uma chave real for parar no Git:** remover o arquivo depois **não** a retira do histórico. Revogue a
-chave imediatamente no console do provedor, gere outra e só então limpe o histórico (passo a passo em
-`docs/GUIA_ENTREGA.md`).
+chave imediatamente no console do provedor e gere outra.
 
-## 14. Documentos do projeto
-
-- `RELATORIO_EXECUCAO.md` — evolução por nível, decisões, testes, falhas e uso de IA.
-- `docs/GUIA_ENTREGA.md` — roteiro de commits, tags, pull request, ambiente limpo, chave vazada e vídeo.
-
-## 15. Criar e exportar a imagem Docker
+## 13. Criar e exportar a imagem Docker
 
 Abra o terminal na pasta que contém o `Dockerfile` e mantenha o Docker Desktop iniciado.
 No PowerShell, crie a imagem com o ponto final (`.`), que informa ao Docker que a pasta atual
