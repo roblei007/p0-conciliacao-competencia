@@ -1,7 +1,7 @@
 # P0 — Lançamentos contábeis por competência com apoio de LLM
 
 Projeto P0 (Primeiro fluxo com LLM) — TrendsIA / Univesp.
-Autor: **[PREENCHER: seu nome]** · Vídeo de demonstração: **[PREENCHER: link do YouTube não listado]**
+Autor: **Roberto Alves Leite** · Vídeo de demonstração: **Link do YouTube não listado**
 
 ## 1. Problema
 
@@ -48,7 +48,7 @@ entrada (terminal/arquivo) → validação → configuração (.env) → solicit
 são suportados, escolhidos em `LLM_API_FORMAT`: `anthropic` (padrão, API de Mensagens da Anthropic) e
 `openai` (formato `chat/completions`, usado por muitos provedores e gateways institucionais). O modelo
 vem de `LLM_MODEL` e o endereço de `LLM_API_URL`; trocar de modelo ou provedor não exige alterar o código.
-**[PREENCHER: provedor, modelo e formato que você efetivamente usou.]**
+**Provedor, modelo e formato que você efetivamente usou.**
 
 ## 4. Limites do projeto
 
@@ -63,8 +63,8 @@ Bibliotecas: `requests` (testado com 2.33.1), `python-dotenv` (testado com 1.2.2
 Terminal: qualquer um (Windows Terminal/PowerShell, macOS, Linux ou WSL). Os comandos abaixo indicam as variações.
 
 ```bash
-git clone [PREENCHER: URL do seu repositório]
-cd [PREENCHER: nome da pasta]
+git clone [URL do seu repositório]
+cd [nome da pasta]
 
 # Linux / macOS / WSL  (no Ubuntu/WSL pode ser preciso: sudo apt-get install python3-venv python3-pip)
 python3 -m venv .venv
@@ -148,8 +148,8 @@ Sugestão gerada por IA: revise contas, valores e datas antes de contabilizar.
 ```
 
 > **Atenção:** `saida_energia.txt` é uma saída **ilustrativa**, gerada a partir de uma resposta
-> simulada para mostrar o formato. [PREENCHER: substitua pela saída da sua execução real e indique a
-> data e o modelo usado.] A resposta de um LLM pode variar entre execuções.
+> simulada para mostrar o formato. Substitua pela saída da sua execução real e indique a
+> data e o modelo usado. A resposta de um LLM pode variar entre execuções.
 
 Outros exemplos prontos: `exemplos/fato_seguro.txt` (pagamento antecipado que abrange vários
 períodos) e `exemplos/fato_incompleto.txt` (falta de dados: o esperado é nenhum lançamento e um
