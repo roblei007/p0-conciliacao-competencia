@@ -68,11 +68,20 @@ def _consultar_ollama(host: str, modelo: str, fato: str, timeout: int, max_token
         with urlopen(requisicao, timeout=timeout) as resposta:
             dados = json.loads(resposta.read())
     except HTTPError as erro:
-        if erro.code in (401, 403):
-            raise LLMServiceError(3, f"O Ollama recusou a solicitação (HTTP {erro.code}).") from erro
-        if erro.code == 429 or erro.code >= 500:
-            raise LLMServiceError(4, f"O Ollama retornou HTTP {erro.code}; tente novamente mais tarde.") from erro
-        raise LLMServiceError(2, f"O Ollama rejeitou a solicitação (HTTP {erro.code}).") from erro
+        try:
+            if erro.code in (401, 403):
+                raise LLMServiceError(
+                    3, f"O Ollama recusou a solicitação (HTTP {erro.code})."
+                ) from erro
+            if erro.code == 429 or erro.code >= 500:
+                raise LLMServiceError(
+                    4, f"O Ollama retornou HTTP {erro.code}; tente novamente mais tarde."
+                ) from erro
+            raise LLMServiceError(
+                2, f"O Ollama rejeitou a solicitação (HTTP {erro.code})."
+            ) from erro
+        finally:
+            erro.close()
     except (URLError, TimeoutError) as erro:
         raise LLMServiceError(
             4, "Falha de conexão ou timeout com o Ollama; verifique host, rede e disponibilidade."
@@ -99,7 +108,7 @@ def consultar_llm(fato: str) -> str:
     host_ollama = os.getenv("LLM_OLLAMA_HOST_URL", "").strip()
     url = os.getenv("LLM_API_URL", "").strip()
     modelo = os.getenv("LLM_MODEL", "").strip()
-    chave = os.getenv("GROQ_API_KEY", "").strip()
+    chave = os.getenv("LLM_API_KEY", "").strip() or os.getenv("GROQ_API_KEY", "").strip()
     if not modelo:
         raise ConfigurationError("A variável LLM_MODEL não foi configurada.")
 
@@ -110,7 +119,7 @@ def consultar_llm(fato: str) -> str:
     if not url:
         raise ConfigurationError("Configure LLM_OLLAMA_HOST_URL ou LLM_API_URL.")
     if not chave:
-        raise ConfigurationError("A variável GROQ_API_KEY é obrigatória para LLM_API_URL.")
+        raise ConfigurationError("A variável LLM_API_KEY é obrigatória para LLM_API_URL.")
 
     cliente = OpenAI(
         base_url=url,

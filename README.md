@@ -76,17 +76,18 @@ cp .env.example .env            # Windows: Copy-Item .env.example .env
 2. No `.env`, configure o host Ollama e o modelo. O arquivo `.env` está no `.gitignore`:
    **nunca o publique**.
 
-Parâmetros opcionais (alteráveis sem mexer no código):
+Variáveis de configuração (o Dockerfile fornece padrões para o Ollama):
 
 | Variável | Padrão | Função |
 |---|---|---|
-| `LLM_OLLAMA_HOST_URL` | `https://llm-internal.softex:9001` | endereço base do Ollama; o app usa `/api/chat` |
-| `LLM_MODEL` | `qwen3.5:9b-q4_K_M` | modelo Ollama |
+| `LLM_OLLAMA_HOST_URL` | `https://llm-internal.softex:9001` no Docker | endereço base do Ollama; o app usa `/api/chat` |
+| `LLM_MODEL` | `qwen3.5:9b-q4_K_M` no Docker | modelo Ollama |
 | `LLM_MAX_TOKENS` | 1000 | limite máximo de tokens gerados |
 | `LLM_TIMEOUT` | 120 | segundos de espera pela resposta |
 
-Para usar outra API compatível com OpenAI, configure `LLM_API_URL` e `GROQ_API_KEY`; essa
-configuração é usada quando `LLM_OLLAMA_HOST_URL` não está definido.
+Para usar outra API compatível com OpenAI, configure `LLM_API_URL` e `LLM_API_KEY`; a variável
+legada `GROQ_API_KEY` também é aceita. Como a imagem Docker define o host Ollama por padrão,
+adicione `LLM_OLLAMA_HOST_URL=` ao `.env` para desativá-lo nesse modo.
 
 ## 7. Execução
 
@@ -98,7 +99,7 @@ Digite o fato operacional quando solicitado. O computador ou container precisa t
 configurado em `LLM_OLLAMA_HOST_URL`; essa configuração Ollama não exige chave de API.
 
 **Códigos de saída:** `0` sucesso · `1` entrada vazia ou encerrada · `2` configuração inválida ou
-solicitação rejeitada (HTTP 4xx, exceto 401/403) · `3` chave/permissão recusada · `4` falha de rede,
+solicitação rejeitada (HTTP 4xx, exceto 401/403) · `3` autenticação/permissão recusada · `4` falha de rede,
 limite de requisições ou indisponibilidade (HTTP 5xx) · `5` resposta vazia ou truncada · `99` erro
 inesperado do SDK.
 
@@ -198,8 +199,8 @@ Para salvar a imagem como um arquivo TAR na pasta do projeto:
 docker save -o .\meu-app.tar meu-app:1.0
 ```
 
-O arquivo `.env` não é incluído na imagem. Para executar o programa no container, crie e preencha
-esse arquivo com as variáveis de acesso ao provedor e rode:
+O arquivo `.env` não é incluído na imagem. Para executar o programa no container, crie esse arquivo
+com as variáveis de configuração necessárias e rode:
 
 ```powershell
 docker run --rm -it --env-file .env meu-app:1.0

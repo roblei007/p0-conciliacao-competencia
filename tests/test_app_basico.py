@@ -122,6 +122,29 @@ class ConsultarLlmTests(unittest.TestCase):
             max_tokens=1000,
         )
 
+    def test_api_compativel_usa_chave_generica_com_precedencia(self) -> None:
+        ambiente = CONFIGURACAO | {"LLM_API_KEY": "chave-generica"}
+        resposta = SimpleNamespace(
+            choices=[
+                SimpleNamespace(
+                    finish_reason="stop",
+                    message=SimpleNamespace(content="resposta"),
+                )
+            ]
+        )
+        with (
+            patch.dict(os.environ, ambiente, clear=True),
+            patch("app_basico.OpenAI") as cliente_cls,
+        ):
+            cliente_cls.return_value.chat.completions.create.return_value = resposta
+            app_basico.consultar_llm("fato")
+
+        cliente_cls.assert_called_once_with(
+            base_url=CONFIGURACAO["LLM_API_URL"],
+            api_key="chave-generica",
+            timeout=120,
+        )
+
     def test_variaveis_obrigatorias(self) -> None:
         for variavel in CONFIGURACAO:
             with self.subTest(variavel=variavel):
