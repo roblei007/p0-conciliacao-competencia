@@ -29,11 +29,12 @@ nunca contabilização automática.
 ## 3. Como a solução funciona
 
 ```
-entrada no terminal → configuração (.env) → API Groq (SDK OpenAI) → resposta no terminal
+entrada no terminal → configuração (.env) → API Ollama → resposta no terminal
 ```
 
-O programa está em `app_basico.py`. Ele usa o SDK OpenAI apontado para a API compatível da Groq,
-com o modelo `qwen/qwen3.8-27b`.
+O programa está em `app_basico.py`. Por padrão, usa a API nativa do Ollama no servidor configurado
+em `LLM_OLLAMA_HOST_URL`, com o modelo indicado em `LLM_MODEL`. Também mantém suporte a APIs
+compatíveis com OpenAI.
 
 ## 4. Limites do projeto
 
@@ -72,18 +73,20 @@ O ambiente está ativo quando o prefixo `(.venv)` aparece no início da linha do
 cp .env.example .env            # Windows: Copy-Item .env.example .env
 ```
 
-2. No `.env`, informe sua chave `GROQ_API_KEY`, obtida em https://console.groq.com/keys.
-   O arquivo `.env` está no `.gitignore`: **nunca o publique**.
+2. No `.env`, configure o host Ollama e o modelo. O arquivo `.env` está no `.gitignore`:
+   **nunca o publique**.
 
 Parâmetros opcionais (alteráveis sem mexer no código):
 
 | Variável | Padrão | Função |
 |---|---|---|
-| `LLM_API_URL` | `https://api.groq.com/openai/v1` | URL base da API Groq |
-| `LLM_MODEL` | `qwen/qwen3.8-27b` | modelo da Groq |
-| `GROQ_API_KEY` | vazio | chave de API obrigatória |
+| `LLM_OLLAMA_HOST_URL` | `https://llm-internal.softex:9001` | endereço base do Ollama; o app usa `/api/chat` |
+| `LLM_MODEL` | `qwen3.5:9b-q4_K_M` | modelo Ollama |
 | `LLM_MAX_TOKENS` | 1000 | limite máximo de tokens gerados |
 | `LLM_TIMEOUT` | 120 | segundos de espera pela resposta |
+
+Para usar outra API compatível com OpenAI, configure `LLM_API_URL` e `GROQ_API_KEY`; essa
+configuração é usada quando `LLM_OLLAMA_HOST_URL` não está definido.
 
 ## 7. Execução
 
@@ -91,8 +94,8 @@ Parâmetros opcionais (alteráveis sem mexer no código):
 python app_basico.py
 ```
 
-Digite o fato operacional quando solicitado. O computador precisa ter acesso à internet para chamar
-a API Groq; em Docker, configure a chave no ambiente do container.
+Digite o fato operacional quando solicitado. O computador ou container precisa ter acesso ao host
+configurado em `LLM_OLLAMA_HOST_URL`; essa configuração Ollama não exige chave de API.
 
 **Códigos de saída:** `0` sucesso · `1` entrada vazia ou encerrada · `2` configuração inválida ou
 solicitação rejeitada (HTTP 4xx, exceto 401/403) · `3` chave/permissão recusada · `4` falha de rede,
@@ -134,9 +137,9 @@ Erro: descreva o fato operacional.
 
 ## 9. Testes automatizados
 
-Os testes em `tests/test_app_basico.py` usam mocks e não fazem chamadas à Groq, não exigem chave
-válida e não consomem créditos. Eles cobrem configuração obrigatória e numérica, chamada do SDK,
-respostas vazias/truncadas, classificação de erros HTTP/SDK e comportamento do terminal.
+Os testes em `tests/test_app_basico.py` usam mocks e não fazem chamadas ao serviço LLM. Eles cobrem
+configuração, chamada Ollama/OpenAI, respostas vazias/truncadas, classificação de erros e comportamento
+do terminal.
 
 ```bash
 python -m pytest -v
@@ -144,14 +147,14 @@ python -m pytest -v
 python -m unittest discover -s tests -v
 ```
 
-Uma chamada real à Groq não faz parte da suíte automatizada; teste-a manualmente somente com uma
-chave válida e sabendo que o provedor pode consumir cota.
+Uma chamada real ao serviço LLM não faz parte da suíte automatizada; teste-a manualmente apenas
+quando o host estiver acessível.
 
 ## 10. Privacidade e credenciais
 
-O programa envia o fato operacional à API externa da Groq. Não envie dados pessoais ou sigilosos
-sem autorização institucional. O `.env` está no `.gitignore`; nunca publique a chave. O aplicativo
-não cria arquivos de log.
+O programa envia o fato operacional ao serviço LLM configurado. Não envie dados pessoais ou
+sigilosos sem autorização institucional. O `.env` está no `.gitignore`; nunca publique credenciais.
+O aplicativo não cria arquivos de log.
 
 ## 11. Limitações conhecidas
 
@@ -160,7 +163,7 @@ não cria arquivos de log.
 - Um fato por execução; não há novas tentativas automáticas em caso de indisponibilidade.
 - A resposta pode variar entre execuções. O programa detecta respostas vazias e truncamento pelo
   limite de tokens, mas não valida a correção contábil do conteúdo.
-- O acesso à Groq depende da internet, da validade da chave e da disponibilidade/cota do provedor.
+- O acesso ao serviço LLM depende da rede, do host configurado e da disponibilidade do provedor.
 
 ## 12. Solução de problemas
 
@@ -168,12 +171,12 @@ não cria arquivos de log.
 |---|---|---|
 | `ModuleNotFoundError: No module named 'openai'` ou `'dotenv'` | ambiente virtual não ativado, ou `pip install` feito em outro Python | ative o `.venv` (prefixo `(.venv)`), rode `pip install -r requirements.txt` e confira com `python -c "import sys; print(sys.executable)"` que o Python é o do `.venv` |
 | PowerShell: "a execução de scripts foi desabilitada" | política de execução do Windows | `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` e ative o `.venv` de novo |
-| `Erro: A variável GROQ_API_KEY não foi configurada` | `.env` não existe, está em outra pasta ou a chave está em branco | copie `.env.example` para `.env` na raiz e preencha a chave |
-| `A Groq recusou a chave` (401) | chave errada, revogada ou com espaços | gere outra chave e atualize o `.env` |
-| Acesso negado (403) | sem permissão para o modelo ou chave sem autorização | confira o modelo e as permissões da chave |
+| Falha de conexão com o Ollama | host incorreto, sem conectividade ou serviço indisponível | confira `LLM_OLLAMA_HOST_URL`, a rede e o caminho `/api/chat` |
+| Modelo não encontrado | nome do modelo inválido ou não disponível no servidor | confira `LLM_MODEL` e se o modelo está disponível no Ollama |
+| Acesso negado (401/403) | serviço exige credencial ou acesso não autorizado | confira a política de autenticação do serviço |
 | Resposta truncada | `LLM_MAX_TOKENS` insuficiente | aumente `LLM_MAX_TOKENS` no `.env` |
 | Solicitação rejeitada (HTTP 400) | modelo ou configuração recusados pelo serviço | confira `LLM_MODEL` e as configurações |
-| Limite de requisições ou serviço indisponível | cota/rate limit ou indisponibilidade temporária | aguarde e tente novamente; confira sua cota Groq |
+| Limite de requisições ou serviço indisponível | limite ou indisponibilidade temporária | aguarde e tente novamente; confira o serviço LLM |
 | `pytest` não encontrado | dependências não instaladas | `pip install -r requirements.txt` com o `.venv` ativo |
 
 **Se uma chave real for parar no Git:** remover o arquivo depois **não** a retira do histórico. Revogue a

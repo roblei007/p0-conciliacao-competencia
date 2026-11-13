@@ -1,7 +1,9 @@
+import json
 import os
 import unittest
 from types import SimpleNamespace
-from unittest.mock import patch
+from urllib.error import HTTPError
+from unittest.mock import MagicMock, patch
 
 import httpx
 from openai import (
@@ -31,6 +33,63 @@ def erro_status(tipo: type[APIStatusError], status: int) -> APIStatusError:
 
 
 class ConsultarLlmTests(unittest.TestCase):
+    def test_chamada_ollama_nativa_sem_chave(self) -> None:
+        ambiente = {
+            "LLM_OLLAMA_HOST_URL": "https://llm-internal.softex:9001",
+            "LLM_MODEL": "qwen3.5:9b-q4_K_M",
+        }
+        resposta = MagicMock()
+        resposta.__enter__.return_value.read.return_value = json.dumps(
+            {"message": {"content": "  resposta Ollama  "}, "done": True}
+        ).encode()
+        with (
+            patch.dict(os.environ, ambiente, clear=True),
+            patch("app_basico.urlopen", return_value=resposta) as urlopen_mock,
+            patch("app_basico.OpenAI") as cliente_cls,
+        ):
+            resultado = app_basico.consultar_llm("fato de teste")
+
+        self.assertEqual(resultado, "resposta Ollama")
+        requisicao = urlopen_mock.call_args.args[0]
+        self.assertEqual(requisicao.full_url, f"{ambiente['LLM_OLLAMA_HOST_URL']}/api/chat")
+        self.assertEqual(requisicao.get_method(), "POST")
+        self.assertEqual(json.loads(requisicao.data), {
+            "model": ambiente["LLM_MODEL"],
+            "messages": [
+                {"role": "system", "content": app_basico.SYSTEM_PROMPT},
+                {"role": "user", "content": "fato de teste"},
+            ],
+            "stream": False,
+            "options": {"num_predict": 1000},
+        })
+        urlopen_mock.assert_called_once_with(requisicao, timeout=120)
+        cliente_cls.assert_not_called()
+
+    def test_erro_http_ollama_e_repassado_com_codigo(self) -> None:
+        erro_http = HTTPError(
+            "https://llm-internal.softex:9001/api/chat",
+            404,
+            "Not Found",
+            None,
+            None,
+        )
+        with (
+            patch.dict(
+                os.environ,
+                {
+                    "LLM_OLLAMA_HOST_URL": "https://llm-internal.softex:9001",
+                    "LLM_MODEL": "qwen3.5:9b-q4_K_M",
+                },
+                clear=True,
+            ),
+            patch("app_basico.urlopen", side_effect=erro_http),
+            self.assertRaises(app_basico.LLMServiceError) as contexto,
+        ):
+            app_basico.consultar_llm("fato")
+
+        self.assertEqual(contexto.exception.codigo, 2)
+        erro_http.close()
+
     def test_chamada_sdk_e_texto_de_resposta(self) -> None:
         resposta = SimpleNamespace(
             choices=[
