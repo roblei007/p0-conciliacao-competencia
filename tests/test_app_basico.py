@@ -1,9 +1,7 @@
-import json
 import os
 import unittest
 from types import SimpleNamespace
-from urllib.error import HTTPError
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import httpx
 from openai import (
@@ -20,9 +18,9 @@ import app_basico
 
 
 CONFIGURACAO = {
-    "LLM_API_URL": "https://api.groq.com/openai/v1",
-    "LLM_MODEL": "qwen/qwen3.8-27b",
-    "GROQ_API_KEY": "chave-de-teste",
+    "LLM_BASE_URL": "https://llm-internal.softex:9001/v1",
+    "LLM_MODEL": "qwen3.5:9b-q4_K_M",
+    "LLM_API_KEY": "qualquer",
 }
 
 
@@ -33,63 +31,6 @@ def erro_status(tipo: type[APIStatusError], status: int) -> APIStatusError:
 
 
 class ConsultarLlmTests(unittest.TestCase):
-    def test_chamada_ollama_nativa_sem_chave(self) -> None:
-        ambiente = {
-            "LLM_OLLAMA_HOST_URL": "https://llm-internal.softex:9001",
-            "LLM_MODEL": "qwen3.5:9b-q4_K_M",
-        }
-        resposta = MagicMock()
-        resposta.__enter__.return_value.read.return_value = json.dumps(
-            {"message": {"content": "  resposta Ollama  "}, "done": True}
-        ).encode()
-        with (
-            patch.dict(os.environ, ambiente, clear=True),
-            patch("app_basico.urlopen", return_value=resposta) as urlopen_mock,
-            patch("app_basico.OpenAI") as cliente_cls,
-        ):
-            resultado = app_basico.consultar_llm("fato de teste")
-
-        self.assertEqual(resultado, "resposta Ollama")
-        requisicao = urlopen_mock.call_args.args[0]
-        self.assertEqual(requisicao.full_url, f"{ambiente['LLM_OLLAMA_HOST_URL']}/api/chat")
-        self.assertEqual(requisicao.get_method(), "POST")
-        self.assertEqual(json.loads(requisicao.data), {
-            "model": ambiente["LLM_MODEL"],
-            "messages": [
-                {"role": "system", "content": app_basico.SYSTEM_PROMPT},
-                {"role": "user", "content": "fato de teste"},
-            ],
-            "stream": False,
-            "options": {"num_predict": 1000},
-        })
-        urlopen_mock.assert_called_once_with(requisicao, timeout=120)
-        cliente_cls.assert_not_called()
-
-    def test_erro_http_ollama_e_repassado_com_codigo(self) -> None:
-        erro_http = HTTPError(
-            "https://llm-internal.softex:9001/api/chat",
-            404,
-            "Not Found",
-            None,
-            None,
-        )
-        with (
-            patch.dict(
-                os.environ,
-                {
-                    "LLM_OLLAMA_HOST_URL": "https://llm-internal.softex:9001",
-                    "LLM_MODEL": "qwen3.5:9b-q4_K_M",
-                },
-                clear=True,
-            ),
-            patch("app_basico.urlopen", side_effect=erro_http),
-            self.assertRaises(app_basico.LLMServiceError) as contexto,
-        ):
-            app_basico.consultar_llm("fato")
-
-        self.assertEqual(contexto.exception.codigo, 2)
-        erro_http.close()
-
     def test_chamada_sdk_e_texto_de_resposta(self) -> None:
         resposta = SimpleNamespace(
             choices=[
@@ -102,28 +43,32 @@ class ConsultarLlmTests(unittest.TestCase):
         with (
             patch.dict(os.environ, CONFIGURACAO, clear=True),
             patch("app_basico.OpenAI") as cliente_cls,
+            patch("app_basico.DefaultHttpxClient") as cliente_httpx_cls,
         ):
-            cliente_cls.return_value.chat.completions.create.return_value = resposta
+            cliente = cliente_cls.return_value.__enter__.return_value
+            cliente.chat.completions.create.return_value = resposta
 
             resultado = app_basico.consultar_llm("fato de teste")
 
         self.assertEqual(resultado, "resposta de teste")
+        cliente_httpx_cls.assert_called_once_with(verify=False)
+        cliente_cls.return_value.__exit__.assert_called_once()
         cliente_cls.assert_called_once_with(
-            base_url=CONFIGURACAO["LLM_API_URL"],
-            api_key=CONFIGURACAO["GROQ_API_KEY"],
+            base_url=CONFIGURACAO["LLM_BASE_URL"],
+            api_key=CONFIGURACAO["LLM_API_KEY"],
             timeout=120,
+            http_client=cliente_httpx_cls.return_value,
         )
-        cliente_cls.return_value.chat.completions.create.assert_called_once_with(
+        cliente.chat.completions.create.assert_called_once_with(
             model=CONFIGURACAO["LLM_MODEL"],
             messages=[
                 {"role": "system", "content": app_basico.SYSTEM_PROMPT},
                 {"role": "user", "content": "fato de teste"},
             ],
-            max_tokens=1000,
+            max_tokens=2000,
         )
 
-    def test_api_compativel_usa_chave_generica_com_precedencia(self) -> None:
-        ambiente = CONFIGURACAO | {"LLM_API_KEY": "chave-generica"}
+    def test_padrao_usa_endpoint_modelo_e_chave_do_servico(self) -> None:
         resposta = SimpleNamespace(
             choices=[
                 SimpleNamespace(
@@ -133,29 +78,28 @@ class ConsultarLlmTests(unittest.TestCase):
             ]
         )
         with (
-            patch.dict(os.environ, ambiente, clear=True),
+            patch.dict(os.environ, {}, clear=True),
             patch("app_basico.OpenAI") as cliente_cls,
+            patch("app_basico.DefaultHttpxClient") as cliente_httpx_cls,
         ):
-            cliente_cls.return_value.chat.completions.create.return_value = resposta
+            cliente = cliente_cls.return_value.__enter__.return_value
+            cliente.chat.completions.create.return_value = resposta
             app_basico.consultar_llm("fato")
 
         cliente_cls.assert_called_once_with(
-            base_url=CONFIGURACAO["LLM_API_URL"],
-            api_key="chave-generica",
+            base_url="https://llm-internal.softex:9001/v1",
+            api_key="qualquer",
             timeout=120,
+            http_client=cliente_httpx_cls.return_value,
         )
-
-    def test_variaveis_obrigatorias(self) -> None:
-        for variavel in CONFIGURACAO:
-            with self.subTest(variavel=variavel):
-                ambiente = CONFIGURACAO | {variavel: ""}
-                with (
-                    patch.dict(os.environ, ambiente, clear=True),
-                    patch("app_basico.OpenAI") as cliente_cls,
-                    self.assertRaises(app_basico.ConfigurationError),
-                ):
-                    app_basico.consultar_llm("fato")
-                cliente_cls.assert_not_called()
+        cliente.chat.completions.create.assert_called_once_with(
+            model="qwen3.5:9b-q4_K_M",
+            messages=[
+                {"role": "system", "content": app_basico.SYSTEM_PROMPT},
+                {"role": "user", "content": "fato"},
+            ],
+            max_tokens=2000,
+        )
 
     def test_timeout_e_limite_de_tokens_devem_ser_inteiros_positivos(self) -> None:
         for variavel, valor in (
@@ -203,8 +147,10 @@ class ConsultarLlmTests(unittest.TestCase):
                 with (
                     patch.dict(os.environ, CONFIGURACAO, clear=True),
                     patch("app_basico.OpenAI") as cliente_cls,
+                    patch("app_basico.DefaultHttpxClient"),
                 ):
-                    cliente_cls.return_value.chat.completions.create.return_value = resposta
+                    cliente = cliente_cls.return_value.__enter__.return_value
+                    cliente.chat.completions.create.return_value = resposta
                     with self.assertRaises(app_basico.InvalidResponseError):
                         app_basico.consultar_llm("fato")
 
@@ -214,7 +160,7 @@ class ClassificarErroTests(unittest.TestCase):
         for tipo in (AuthenticationError, PermissionDeniedError):
             with self.subTest(tipo=tipo):
                 erro = erro_status(tipo, 401 if tipo is AuthenticationError else 403)
-                self.assertEqual(app_basico._classificar_erro_api(erro)[0], 3)
+                self.assertEqual(app_basico.classificar_erro_api(erro)[0], 3)
 
     def test_conexao_limite_e_indisponibilidade(self) -> None:
         requisicao = httpx.Request("POST", "https://api.groq.com/openai/v1/chat/completions")
@@ -225,74 +171,11 @@ class ClassificarErroTests(unittest.TestCase):
         )
         for erro in erros:
             with self.subTest(tipo=type(erro).__name__):
-                self.assertEqual(app_basico._classificar_erro_api(erro)[0], 4)
+                self.assertEqual(app_basico.classificar_erro_api(erro)[0], 4)
 
     def test_outros_status_e_erros_do_sdk(self) -> None:
-        self.assertEqual(app_basico._classificar_erro_api(erro_status(APIStatusError, 400))[0], 2)
-        self.assertEqual(app_basico._classificar_erro_api(OpenAIError("erro"))[0], 99)
-
-
-class MainTests(unittest.TestCase):
-    def test_sucesso(self) -> None:
-        with (
-            patch("app_basico.load_dotenv"),
-            patch("builtins.input", return_value="fato"),
-            patch("app_basico.consultar_llm", return_value="resposta"),
-            patch("builtins.print") as print_mock,
-        ):
-            self.assertEqual(app_basico.main(), 0)
-        print_mock.assert_called_once_with("resposta")
-
-    def test_entrada_vazia_ou_fim_de_entrada(self) -> None:
-        for entrada in ("", "   "):
-            with self.subTest(entrada=entrada):
-                with (
-                    patch("app_basico.load_dotenv"),
-                    patch("builtins.input", return_value=entrada),
-                    patch("app_basico.consultar_llm") as consultar_mock,
-                    patch("builtins.print"),
-                ):
-                    self.assertEqual(app_basico.main(), 1)
-                consultar_mock.assert_not_called()
-
-        with (
-            patch("app_basico.load_dotenv"),
-            patch("builtins.input", side_effect=EOFError),
-            patch("builtins.print"),
-        ):
-            self.assertEqual(app_basico.main(), 1)
-
-    def test_erros_de_configuracao_e_resposta_usam_codigos_corretos(self) -> None:
-        casos = (
-            (app_basico.ConfigurationError("configuração inválida"), 2),
-            (app_basico.InvalidResponseError("resposta vazia"), 5),
-        )
-        for erro, codigo in casos:
-            with self.subTest(codigo=codigo):
-                with (
-                    patch("app_basico.load_dotenv"),
-                    patch("builtins.input", return_value="fato"),
-                    patch("app_basico.consultar_llm", side_effect=erro),
-                    patch("builtins.print"),
-                ):
-                    self.assertEqual(app_basico.main(), codigo)
-
-    def test_erros_da_api_usam_codigos_corretos(self) -> None:
-        casos = (
-            (erro_status(AuthenticationError, 401), 3),
-            (erro_status(RateLimitError, 429), 4),
-            (erro_status(APIStatusError, 400), 2),
-            (OpenAIError("erro"), 99),
-        )
-        for erro, codigo in casos:
-            with self.subTest(codigo=codigo):
-                with (
-                    patch("app_basico.load_dotenv"),
-                    patch("builtins.input", return_value="fato"),
-                    patch("app_basico.consultar_llm", side_effect=erro),
-                    patch("builtins.print"),
-                ):
-                    self.assertEqual(app_basico.main(), codigo)
+        self.assertEqual(app_basico.classificar_erro_api(erro_status(APIStatusError, 400))[0], 2)
+        self.assertEqual(app_basico.classificar_erro_api(OpenAIError("erro"))[0], 99)
 
 
 if __name__ == "__main__":

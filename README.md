@@ -29,28 +29,27 @@ nunca contabilização automática.
 ## 3. Como a solução funciona
 
 ```
-entrada no terminal → configuração (.env) → API Ollama → resposta no terminal
+navegador → aplicação web Flask → API compatível com OpenAI → sugestão na página
 ```
 
-O programa está em `app_basico.py`. Por padrão, usa a API nativa do Ollama no servidor configurado
-em `LLM_OLLAMA_HOST_URL`, com o modelo indicado em `LLM_MODEL`. Também mantém suporte a APIs
-compatíveis com OpenAI.
+O formulário web está em `app_web.py`. O backend usa o SDK OpenAI contra
+`https://llm-internal.softex:9001/v1`, com o modelo `qwen3.5:9b-q4_K_M`.
 
 ## 4. Limites do projeto
 
-Python, execução local, um único LLM, entrada e saída textuais, um fato operacional por execução.
-**Fora do escopo:** interface web/gráfica, banco de dados, RAG, agentes, plano de contas oficial
-(COSIF), integração com sistemas contábeis, contabilização automática.
+Python, aplicação web, um único LLM, entrada e saída textuais. **Fora do escopo:** banco de dados,
+RAG, agentes, plano de contas oficial (COSIF), integração com sistemas contábeis e contabilização
+automática.
 
 ## 5. Instalação
 
-Requisitos: **Python 3.10 ou superior** (desenvolvido e testado com Python 3.12.3) e Git.
-Bibliotecas: `openai`, `python-dotenv` e `pytest` (para os testes).
-Terminal: qualquer um (Windows Terminal/PowerShell, macOS, Linux ou WSL). Os comandos abaixo indicam as variações.
+Requisitos: **Python 3.10 ou superior** e Git. As dependências (Flask, Waitress, SDK OpenAI,
+python-dotenv e pytest) são instaladas pelo arquivo `requirements.txt`.
 
 ```bash
 git clone [URL do seu repositório]
 cd [nome da pasta]
+cd p0-conciliacao-competencia
 
 # Linux / macOS / WSL  (no Ubuntu/WSL pode ser preciso: sudo apt-get install python3-venv python3-pip)
 python3 -m venv .venv
@@ -65,43 +64,77 @@ pip install -r requirements.txt
 
 O ambiente está ativo quando o prefixo `(.venv)` aparece no início da linha do terminal.
 
-## 6. Configuração do acesso ao LLM
+## 6. Configuração do portal e do LLM
+
+Para abrir a interface web do portal Devel, acesse
+[https://devel-llm.eastus.cloudapp.azure.com/](https://devel-llm.eastus.cloudapp.azure.com/) no navegador e entre com
+o acesso disponibilizado para você. Se o cadastro não estiver liberado, abra um ticket no Jira do Devel.
+
+O portal é a interface web para acessar os recursos da LLM. O endpoint
+`https://llm-internal.softex:9001/v1` é uma API usada pelo aplicativo P0, não a página web do portal.
+Para gerar uma resposta, além do portal/cadastro, o computador ou container que executa a aplicação
+precisa estar na rede que resolve `llm-internal.softex` e permite conexão na porta `9001`.
 
 1. Copie o modelo de configuração:
 
 ```bash
-cp .env.example .env            # Windows: Copy-Item .env.example .env
+cp .env.example .env
+# Windows (PowerShell):
+Copy-Item .env.example .env
 ```
 
-2. No `.env`, configure o host Ollama e o modelo. O arquivo `.env` está no `.gitignore`:
-   **nunca o publique**.
+2. O arquivo `.env` usa como padrão o endpoint OpenAI-compatible e o modelo indicados pelo ambiente.
+   O arquivo `.env` está no `.gitignore`: **nunca o publique**.
 
-Variáveis de configuração (o Dockerfile fornece padrões para o Ollama):
+Variáveis de configuração:
 
 | Variável | Padrão | Função |
 |---|---|---|
-| `LLM_OLLAMA_HOST_URL` | `https://llm-internal.softex:9001` no Docker | endereço base do Ollama; o app usa `/api/chat` |
-| `LLM_MODEL` | `qwen3.5:9b-q4_K_M` no Docker | modelo Ollama |
-| `LLM_MAX_TOKENS` | 1000 | limite máximo de tokens gerados |
+| `LLM_BASE_URL` | `https://llm-internal.softex:9001/v1` | URL base da API compatível com OpenAI |
+| `LLM_API_KEY` | `qualquer` | chave aceita pelo serviço interno |
+| `LLM_MODEL` | `qwen3.5:9b-q4_K_M` | modelo utilizado |
+| `LLM_MAX_TOKENS` | 2000 | limite máximo de tokens gerados |
 | `LLM_TIMEOUT` | 120 | segundos de espera pela resposta |
 
-Para usar outra API compatível com OpenAI, configure `LLM_API_URL` e `LLM_API_KEY`; a variável
-legada `GROQ_API_KEY` também é aceita. Como a imagem Docker define o host Ollama por padrão,
-adicione `LLM_OLLAMA_HOST_URL=` ao `.env` para desativá-lo nesse modo.
+O certificado TLS da LLM é autogerado. O cliente HTTP do SDK está configurado com `verify=False`,
+conforme o manual do serviço; use essa configuração apenas para o endpoint interno indicado.
 
-## 7. Execução
+## 7. Execução local
 
-```bash
-python app_basico.py
+No PowerShell, partindo da pasta raiz do repositório:
+
+```powershell
+Set-Location .\p0-conciliacao-competencia
+.\.venv\Scripts\Activate.ps1
+python app_web.py
 ```
 
-Digite o fato operacional quando solicitado. O computador ou container precisa ter acesso ao host
-configurado em `LLM_OLLAMA_HOST_URL`; essa configuração Ollama não exige chave de API.
+Se preferir não ativar o ambiente virtual, execute diretamente:
 
-**Códigos de saída:** `0` sucesso · `1` entrada vazia ou encerrada · `2` configuração inválida ou
-solicitação rejeitada (HTTP 4xx, exceto 401/403) · `3` autenticação/permissão recusada · `4` falha de rede,
-limite de requisições ou indisponibilidade (HTTP 5xx) · `5` resposta vazia ou truncada · `99` erro
-inesperado do SDK.
+```powershell
+Set-Location .\p0-conciliacao-competencia
+.\.venv\Scripts\python.exe app_web.py
+```
+
+Mantenha o terminal aberto e acesse `http://localhost:8000` no navegador. Descreva o fato operacional
+e selecione **Gerar sugestão**. Para encerrar o servidor, volte ao terminal e pressione `Ctrl+C`.
+O serviço escuta em `0.0.0.0` na porta definida por `PORT` (padrão `8000`).
+
+No Linux/macOS/WSL, partindo da raiz do repositório:
+
+```bash
+cd p0-conciliacao-competencia
+source .venv/bin/activate
+python app_web.py
+```
+
+Em qualquer sistema, a aplicação pode abrir mesmo sem acesso à LLM; nesse caso, o envio do formulário
+mostrará um erro de conexão. No Windows, verifique a resolução e a porta do serviço com:
+
+```powershell
+Resolve-DnsName llm-internal.softex
+Test-NetConnection llm-internal.softex -Port 9001
+```
 
 ## 8. Exemplos de entrada e saída
 
@@ -130,17 +163,16 @@ Sugestão gerada por IA: revise contas, valores e datas antes de contabilizar.
 > **Atenção:** a saída acima é apenas ilustrativa; o programa imprime o texto gerado pelo modelo,
 > que pode variar e deve ser revisado por um contador.
 
-**Entrada vazia** (enviar só Enter):
+**Entrada vazia**:
 
 ```
-Erro: descreva o fato operacional.
+Descreva o fato operacional.
 ```
 
 ## 9. Testes automatizados
 
-Os testes em `tests/test_app_basico.py` usam mocks e não fazem chamadas ao serviço LLM. Eles cobrem
-configuração, chamada Ollama/OpenAI, respostas vazias/truncadas, classificação de erros e comportamento
-do terminal.
+Os testes em `tests/` usam mocks e não fazem chamadas ao serviço LLM. Eles cobrem a chamada OpenAI,
+TLS, respostas inválidas, classificação de erros e rotas/formulário web.
 
 ```bash
 python -m pytest -v
@@ -161,7 +193,8 @@ O aplicativo não cria arquivos de log.
 
 - O modelo pode errar contas, valores ou o período de competência; **a revisão do contador é obrigatória**.
 - Os nomes das contas são descritivos: não seguem o plano de contas oficial (COSIF) da instituição.
-- Um fato por execução; não há novas tentativas automáticas em caso de indisponibilidade.
+- Cada envio é processado em uma requisição web; não há novas tentativas automáticas em caso de
+  indisponibilidade.
 - A resposta pode variar entre execuções. O programa detecta respostas vazias e truncamento pelo
   limite de tokens, mas não valida a correção contábil do conteúdo.
 - O acesso ao serviço LLM depende da rede, do host configurado e da disponibilidade do provedor.
@@ -170,11 +203,14 @@ O aplicativo não cria arquivos de log.
 
 | Sintoma | Causa provável | O que fazer |
 |---|---|---|
-| `ModuleNotFoundError: No module named 'openai'` ou `'dotenv'` | ambiente virtual não ativado, ou `pip install` feito em outro Python | ative o `.venv` (prefixo `(.venv)`), rode `pip install -r requirements.txt` e confira com `python -c "import sys; print(sys.executable)"` que o Python é o do `.venv` |
+| `ModuleNotFoundError` de Flask ou OpenAI | dependências não instaladas no ambiente ativo | ative o `.venv` (prefixo `(.venv)`) e rode `pip install -r requirements.txt` |
 | PowerShell: "a execução de scripts foi desabilitada" | política de execução do Windows | `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` e ative o `.venv` de novo |
-| Falha de conexão com o Ollama | host incorreto, sem conectividade ou serviço indisponível | confira `LLM_OLLAMA_HOST_URL`, a rede e o caminho `/api/chat` |
-| Modelo não encontrado | nome do modelo inválido ou não disponível no servidor | confira `LLM_MODEL` e se o modelo está disponível no Ollama |
-| Acesso negado (401/403) | serviço exige credencial ou acesso não autorizado | confira a política de autenticação do serviço |
+| Cadastro não liberado no portal Devel | acesso ainda não provisionado | abra um ticket no Jira do Devel |
+| Falha de conexão com a LLM | sem conectividade à rede interna ou serviço indisponível | confira `LLM_BASE_URL` e se a rede resolve `llm-internal.softex` |
+| `SSLCertVerificationError` | certificado autogerado da LLM | o cliente OpenAI usa `verify=False` conforme o manual; confirme que está executando a versão atual |
+| Modelo não encontrado | nome do modelo inválido ou indisponível | confira `LLM_MODEL` |
+| Acesso negado (401/403) | chave ou modelo sem autorização | confira `LLM_API_KEY` e solicite acesso pelo Jira do Devel |
+| Aplicação web não responde | porta não publicada ou container não está saudável | publique a porta `8000` e confira os logs do container |
 | Resposta truncada | `LLM_MAX_TOKENS` insuficiente | aumente `LLM_MAX_TOKENS` no `.env` |
 | Solicitação rejeitada (HTTP 400) | modelo ou configuração recusados pelo serviço | confira `LLM_MODEL` e as configurações |
 | Limite de requisições ou serviço indisponível | limite ou indisponibilidade temporária | aguarde e tente novamente; confira o serviço LLM |
@@ -199,12 +235,15 @@ Para salvar a imagem como um arquivo TAR na pasta do projeto:
 docker save -o .\meu-app.tar meu-app:1.0
 ```
 
-O arquivo `.env` não é incluído na imagem. Para executar o programa no container, crie esse arquivo
-com as variáveis de configuração necessárias e rode:
+O arquivo `.env` não é incluído na imagem. Para executar o serviço web e publicar a porta `8000`:
 
 ```powershell
-docker run --rm -it --env-file .env meu-app:1.0
+docker run --rm -p 8000:8000 --env-file .env meu-app:1.0
 ```
+
+O container inicia o Waitress escutando em `0.0.0.0:8000`; não precisa de terminal interativo.
+O Waitress usa a variável `PORT` (padrão `8000`). Se definir outra porta, publique a mesma porta
+do container, por exemplo: `docker run --rm -p 9000:9000 -e PORT=9000 --env-file .env meu-app:1.0`.
 
 Se o Docker informar que não consegue conectar ao daemon/engine, inicie o Docker Desktop,
 aguarde o engine ficar pronto e repita os comandos.

@@ -1,6 +1,8 @@
 # Execução
 openai>=1.0,<2
 python-dotenv>=1.0,<2
+Flask>=3.0,<4
+waitress>=3.0,<4
 
 # Testes (os testes usam unittest + unittest.mock e rodam com `pytest` ou com `python -m unittest`)
 pytest>=8.0

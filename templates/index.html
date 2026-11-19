@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>P0 | Conciliação por competência</title>
+  <style>
+    :root { color-scheme: light; font-family: system-ui, sans-serif; color: #172033; background: #f3f6fb; }
+    body { margin: 0; padding: 2rem 1rem; }
+    main { max-width: 760px; margin: auto; padding: 2rem; background: white; border-radius: 12px; box-shadow: 0 8px 28px #17203314; }
+    h1 { margin-top: 0; }
+    label { display: block; margin: 1.5rem 0 .5rem; font-weight: 650; }
+    textarea { box-sizing: border-box; width: 100%; min-height: 170px; padding: .8rem; border: 1px solid #aeb8c8; border-radius: 8px; font: inherit; }
+    button { margin-top: 1rem; padding: .7rem 1rem; border: 0; border-radius: 7px; color: white; background: #1457a6; font: inherit; font-weight: 650; cursor: pointer; }
+    .result, .error { margin-top: 1.5rem; padding: 1rem; border-radius: 8px; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .result { background: #eef6f0; }
+    .error { color: #8f1d1d; background: #fff0ef; }
+    .notice { color: #49556a; font-size: .95rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Lançamentos contábeis por competência</h1>
+    <p>Descreva um fato operacional para receber uma sugestão de lançamentos em partidas dobradas.</p>
+    <form method="post">
+      <label for="fato">Fato operacional</label>
+      <textarea id="fato" name="fato" required>{{ fato }}</textarea>
+      <button type="submit">Gerar sugestão</button>
+    </form>
+    {% if erro %}
+    <section class="error" role="alert">{{ erro }}</section>
+    {% endif %}
+    {% if resposta %}
+    <section class="result" aria-live="polite">
+      <h2>Sugestão</h2>
+      {{ resposta }}
+    </section>
+    {% endif %}
+    <p class="notice">A resposta é uma sugestão gerada por IA e deve ser revisada por um contador antes de qualquer contabilização.</p>
+    <p><a href="https://devel-llm.eastus.cloudapp.azure.com/" target="_blank" rel="noopener noreferrer">Portal Devel</a></p>
+  </main>
+</body>
+</html>
