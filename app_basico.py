@@ -1,4 +1,5 @@
 import os
+import socket
 
 from openai import (
     APIConnectionError,
@@ -75,7 +76,17 @@ def consultar_llm(fato: str) -> str:
 def classificar_erro_api(erro: OpenAIError) -> tuple[int, str]:
     if isinstance(erro, (AuthenticationError, PermissionDeniedError)):
         return 3, "O serviço LLM recusou a chave ou não autorizou o acesso ao modelo."
-    if isinstance(erro, (APIConnectionError, RateLimitError, InternalServerError)):
+    if isinstance(erro, APIConnectionError):
+        causa = erro.__cause__
+        while causa is not None:
+            if isinstance(causa, socket.gaierror):
+                return 4, (
+                    "Não foi possível resolver o endereço da LLM; verifique o DNS "
+                    "e o acesso à rede interna (llm-internal.softex)."
+                )
+            causa = causa.__cause__ or causa.__context__
+        return 4, "Falha de conexão, limite de requisições ou indisponibilidade do serviço LLM."
+    if isinstance(erro, (RateLimitError, InternalServerError)):
         return 4, "Falha de conexão, limite de requisições ou indisponibilidade do serviço LLM."
     if isinstance(erro, APIStatusError):
         if erro.status_code == 429 or erro.status_code >= 500:

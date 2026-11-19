@@ -1,4 +1,5 @@
 import os
+import socket
 import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -172,6 +173,18 @@ class ClassificarErroTests(unittest.TestCase):
         for erro in erros:
             with self.subTest(tipo=type(erro).__name__):
                 self.assertEqual(app_basico.classificar_erro_api(erro)[0], 4)
+
+    def test_falha_de_dns_informa_que_o_host_nao_foi_resolvido(self) -> None:
+        erro = APIConnectionError(
+            request=httpx.Request("POST", "https://llm-internal.softex/v1/chat/completions")
+        )
+        erro.__cause__ = socket.gaierror("getaddrinfo failed")
+
+        codigo, mensagem = app_basico.classificar_erro_api(erro)
+
+        self.assertEqual(codigo, 4)
+        self.assertIn("DNS", mensagem)
+        self.assertIn("llm-internal.softex", mensagem)
 
     def test_outros_status_e_erros_do_sdk(self) -> None:
         self.assertEqual(app_basico.classificar_erro_api(erro_status(APIStatusError, 400))[0], 2)

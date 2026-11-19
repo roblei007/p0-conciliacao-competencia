@@ -1,3 +1,4 @@
+import socket
 import unittest
 from unittest.mock import patch
 
@@ -34,11 +35,13 @@ class AplicacaoWebTests(unittest.TestCase):
 
     def test_falha_do_servico_e_exibida_sem_encerrar_a_aplicacao(self) -> None:
         erro = APIConnectionError(request=httpx.Request("POST", "https://llm-internal.softex"))
+        erro.__cause__ = socket.gaierror("getaddrinfo failed")
         with patch("app_web.consultar_llm", side_effect=erro):
             resposta = self.cliente.post("/", data={"fato": "Fatura de energia"})
 
         self.assertEqual(resposta.status_code, 503)
-        self.assertIn(b"Falha de conex", resposta.data)
+        self.assertIn(b"DNS", resposta.data)
+        self.assertIn(b"llm-internal.softex", resposta.data)
 
 
 if __name__ == "__main__":
