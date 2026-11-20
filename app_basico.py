@@ -47,7 +47,7 @@ def consultar_llm(fato: str) -> str:
     chave = os.getenv("LLM_API_KEY", "qualquer").strip() or "qualquer"
 
     timeout = _inteiro_positivo("LLM_TIMEOUT", 120)
-    max_tokens = _inteiro_positivo("LLM_MAX_TOKENS", 2000)
+    max_tokens = _inteiro_positivo("LLM_MAX_TOKENS", 100000)
 
     with OpenAI(
         base_url=base_url,

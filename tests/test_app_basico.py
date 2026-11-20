@@ -66,7 +66,7 @@ class ConsultarLlmTests(unittest.TestCase):
                 {"role": "system", "content": app_basico.SYSTEM_PROMPT},
                 {"role": "user", "content": "fato de teste"},
             ],
-            max_tokens=2000,
+            max_tokens=100000,
         )
 
     def test_padrao_usa_endpoint_modelo_e_chave_do_servico(self) -> None:
@@ -99,7 +99,7 @@ class ConsultarLlmTests(unittest.TestCase):
                 {"role": "system", "content": app_basico.SYSTEM_PROMPT},
                 {"role": "user", "content": "fato"},
             ],
-            max_tokens=2000,
+            max_tokens=100000,
         )
 
     def test_timeout_e_limite_de_tokens_devem_ser_inteiros_positivos(self) -> None:

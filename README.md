@@ -74,6 +74,8 @@ O portal é a interface web para acessar os recursos da LLM. O endpoint
 `https://llm-internal.softex:9001/v1` é uma API usada pelo aplicativo P0, não a página web do portal.
 Para gerar uma resposta, além do portal/cadastro, o computador ou container que executa a aplicação
 precisa estar na rede que resolve `llm-internal.softex` e permite conexão na porta `9001`.
+Essa porta `9001` pertence à API interna da LLM. A interface web P0 é um serviço separado e usa a
+porta HTTP `8000` no container.
 
 1. Copie o modelo de configuração:
 
@@ -93,8 +95,9 @@ Variáveis de configuração:
 | `LLM_BASE_URL` | `https://llm-internal.softex:9001/v1` | URL base da API compatível com OpenAI |
 | `LLM_API_KEY` | `qualquer` | chave aceita pelo serviço interno |
 | `LLM_MODEL` | `qwen3.5:9b-q4_K_M` | modelo utilizado |
-| `LLM_MAX_TOKENS` | 2000 | limite máximo de tokens gerados |
+| `LLM_MAX_TOKENS` | 100000 | limite máximo de tokens gerados |
 | `LLM_TIMEOUT` | 120 | segundos de espera pela resposta |
+| `PORT` | 8000 | porta HTTP da aplicação web P0; não altera a porta da LLM |
 
 O certificado TLS da LLM é autogerado. O cliente HTTP do SDK está configurado com `verify=False`,
 conforme o manual do serviço; use essa configuração apenas para o endpoint interno indicado.
@@ -242,8 +245,8 @@ docker run --rm -p 8000:8000 --env-file .env meu-app:1.0
 ```
 
 O container inicia o Waitress escutando em `0.0.0.0:8000`; não precisa de terminal interativo.
-O Waitress usa a variável `PORT` (padrão `8000`). Se definir outra porta, publique a mesma porta
-do container, por exemplo: `docker run --rm -p 9000:9000 -e PORT=9000 --env-file .env meu-app:1.0`.
+Para esta configuração, publique a porta interna `8000` como `8000:8000`. A porta `9001` é
+exclusivamente do endpoint interno da LLM.
 
 Se o Docker informar que não consegue conectar ao daemon/engine, inicie o Docker Desktop,
 aguarde o engine ficar pronto e repita os comandos.
